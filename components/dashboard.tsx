@@ -1,9 +1,11 @@
-import { AccountBar } from './account-bar'
-import { DerivConnect } from './deriv-connect'
-import { ProfitCard } from './profit-card'
-import { ResultsList } from './results-list'
-import { WinRateCard } from './win-rate-card'
-import { useDeriv } from '../hooks/use-deriv'
+'use client'
+
+import { AccountBar } from '@/components/account-bar'
+import { DerivConnect } from '@/components/deriv-connect'
+import { ProfitCard } from '@/components/profit-card'
+import { ResultsList } from '@/components/results-list'
+import { WinRateCard } from '@/components/win-rate-card'
+import { useDeriv } from '@/hooks/use-deriv'
 
 export function Dashboard() {
   const { ready, token, status, error, account, trades, connect, disconnect } = useDeriv()
