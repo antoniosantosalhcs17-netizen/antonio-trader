@@ -3,6 +3,22 @@ export const DERIV_REDIRECT_URI =
   process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ?? 'http://localhost:3000/oauth/callback'
 
 const OAUTH_STATE_KEY = 'deriv_oauth_state'
+const DERIV_TOKEN_KEY = 'deriv_api_token'
+
+export function getStoredDerivToken() {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(DERIV_TOKEN_KEY)
+}
+
+export function saveDerivToken(token: string) {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(DERIV_TOKEN_KEY, token.trim())
+}
+
+export function clearDerivToken() {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(DERIV_TOKEN_KEY)
+}
 
 export function buildDerivOAuthUrl() {
   const state = crypto.randomUUID()
@@ -36,9 +52,7 @@ export function validateDerivOAuthState(state: string | null) {
 
 export function readDerivTokenFromSearch(search: string) {
   const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
-
   const token = params.get('token1') ?? params.get('token') ?? params.get('access_token')
-  if (!token) return null
 
-  return token.trim()
+  return token ? token.trim() : null
 }

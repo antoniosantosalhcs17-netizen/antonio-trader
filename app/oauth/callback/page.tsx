@@ -1,44 +1,45 @@
-export const DERIV_APP_ID = process.env.NEXT_PUBLIC_DERIV_APP_ID ?? '1089'
-export const DERIV_REDIRECT_URI =
-  process.env.NEXT_PUBLIC_DERIV_REDIRECT_URI ?? 'http://localhost:3000/oauth/callback'
+'use client'
 
-const OAUTH_STATE_KEY = 'deriv_oauth_state'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 
-export function buildDerivOAuthUrl() {
-  const state = crypto.randomUUID()
+import { readDerivTokenFromSearch, saveDerivToken, validateDerivOAuthState } from '@/lib/deriv-oauth'
 
-  if (typeof window !== 'undefined') {
-    window.sessionStorage.setItem(OAUTH_STATE_KEY, state)
-  }
+export default function OAuthCallbackPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [message, setMessage] = useState('Finalizando login...')
+  const [error, setError] = useState<string | null>(null)
 
-  const params = new URLSearchParams({
-    app_id: DERIV_APP_ID,
-    redirect_uri: DERIV_REDIRECT_URI,
-    scope: 'read',
-    state,
-  })
+  useEffect(() => {
+    const state = searchParams.get('state')
+    const token = readDerivTokenFromSearch(window.location.search)
 
-  return `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`
-}
+    if (!validateDerivOAuthState(state)) {
+      setError('O estado da autenticação não foi validado. Tente entrar novamente.')
+      setMessage('Falha na validação do OAuth.')
+      return
+    }
 
-export function validateDerivOAuthState(state: string | null) {
-  if (typeof window === 'undefined') return false
+    if (!token) {
+      setError('Nenhum token de acesso foi retornado pela Deriv.')
+      setMessage('Login cancelado ou sem autorização.')
+      return
+    }
 
-  const stored = window.sessionStorage.getItem(OAUTH_STATE_KEY)
-  const valid = Boolean(state && stored && state === stored)
+    saveDerivToken(token)
+    setMessage('Login concluído com sucesso!')
 
-  if (valid) {
-    window.sessionStorage.removeItem(OAUTH_STATE_KEY)
-  }
+    window.setTimeout(() => router.replace('/'), 600)
+  }, [router, searchParams])
 
-  return valid
-}
-
-export function readDerivTokenFromSearch(search: string) {
-  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
-
-  const token = params.get('token1') ?? params.get('token') ?? params.get('access_token')
-  if (!token) return null
-
-  return token.trim()
+  return (
+    <main className="flex min-h-dvh items-center justify-center bg-[#05070d] px-6 text-center text-white">
+      <div className="max-w-md rounded-3xl border border-cyan-300/30 bg-[#0a0d16]/80 p-8 shadow-[0_0_24px_rgba(34,211,238,0.18)]">
+        <p className="text-sm uppercase tracking-[0.35em] text-cyan-300">Deriv OAuth</p>
+        <h1 className="mt-4 text-2xl font-bold text-white">{message}</h1>
+        {error ? <p className="mt-4 text-sm text-rose-300">{error}</p> : null}
+      </div>
+    </main>
+  )
 }
