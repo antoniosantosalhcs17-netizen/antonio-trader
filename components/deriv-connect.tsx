@@ -3,6 +3,8 @@
 import { KeyRound } from 'lucide-react'
 import { useState } from 'react'
 
+import { buildDerivOAuthUrl } from '@/lib/deriv-oauth'
+
 export function DerivConnect({
   onConnect,
   error,
@@ -14,6 +16,12 @@ export function DerivConnect({
 }) {
   const [value, setValue] = useState('')
 
+  const handleOAuthLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = buildDerivOAuthUrl()
+    }
+  }
+
   return (
     <section
       aria-labelledby="connect-title"
@@ -23,11 +31,26 @@ export function DerivConnect({
         <KeyRound className="size-7 drop-shadow-[0_0_6px_rgba(253,224,71,0.7)]" aria-hidden="true" />
         Conectar à Deriv
       </h2>
+
       <p className="mt-4 leading-relaxed text-slate-300">
-        Cole o seu token de API da Deriv para carregar sua banca, ganhos e perdas em tempo real.
+        Faça login com sua conta Deriv por OAuth ou use um token manualmente para carregar sua banca, ganhos e perdas.
       </p>
 
-      <ol className="mt-4 list-decimal space-y-1.5 pl-5 text-sm text-slate-400">
+      <button
+        type="button"
+        onClick={handleOAuthLogin}
+        className="mt-6 w-full rounded-xl bg-cyan-500 px-4 py-3.5 text-base font-bold uppercase tracking-[0.18em] text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.45)] transition hover:bg-cyan-400"
+      >
+        Entrar com Deriv OAuth
+      </button>
+
+      <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-500">
+        <span className="h-px flex-1 bg-slate-700" />
+        ou
+        <span className="h-px flex-1 bg-slate-700" />
+      </div>
+
+      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-slate-400">
         <li>
           {'Acesse '}
           <a
@@ -42,7 +65,7 @@ export function DerivConnect({
         <li>
           Marque o escopo <strong className="text-white">Ler</strong>.
         </li>
-        <li>Crie o token, copie e cole abaixo.</li>
+        <li>Crie o token e cole abaixo.</li>
       </ol>
 
       <form
@@ -64,7 +87,7 @@ export function DerivConnect({
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder="Ex.: a1-xxxxxxxxxxxxxxxx"
-            className="rounded-xl border border-cyan-300/30 bg-black/70 px-4 py-3.5 text-white placeholder:text-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
+            className="rounded-xl border border-cyan-300/30 bg-black/70 px-4 py-3.5 text-white placeholder:text-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
           />
         </div>
 
@@ -77,7 +100,7 @@ export function DerivConnect({
         <button
           type="submit"
           disabled={connecting || !value.trim()}
-          className="rounded-xl bg-cyan-600 py-3.5 text-lg font-bold uppercase tracking-widest text-black shadow-[0_0_16px_rgba(34,211,238,0.45)] transition-colors hover:bg-cyan-500 disabled:opacity-60"
+          className="rounded-xl bg-cyan-600 py-3.5 text-lg font-bold uppercase tracking-widest text-black shadow-[0_0_16px_rgba(34,211,238,0.45)] transition-colors hover:bg-cyan-500 disabled:opacity-50 disabled:shadow-none"
         >
           {connecting ? 'Conectando...' : 'Conectar'}
         </button>

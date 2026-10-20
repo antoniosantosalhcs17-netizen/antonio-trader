@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
+import {
+  clearDerivToken,
+  getStoredDerivToken,
+  readDerivTokenFromSearch,
+  saveDerivToken,
+} from '@/lib/deriv-oauth'
+
 const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089'
-const TOKEN_KEY = 'deriv_api_token'
 
 export type DerivAccount = {
   loginid: string
@@ -76,7 +82,13 @@ export function useDeriv() {
   const [trades, setTrades] = useState<DerivTrade[]>([])
 
   useEffect(() => {
-    setToken(localStorage.getItem(TOKEN_KEY))
+    const savedToken = getStoredDerivToken() ?? readDerivTokenFromSearch(window.location.search)
+
+    if (savedToken) {
+      saveDerivToken(savedToken)
+      setToken(savedToken)
+    }
+
     setReady(true)
   }, [])
 
@@ -96,8 +108,15 @@ export function useDeriv() {
       const send = (payload: Record<string, unknown>) => {
         if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload))
       }
+
       const loadTrades = () =>
-        send({ profit_table: 1, description: 1, date_from: startOfTodayEpoch(), limit: 100, sort: 'DESC' })
+        send({
+          profit_table: 1,
+          description: 1,
+          date_from: startOfTodayEpoch(),
+          limit: 100,
+          sort: 'DESC',
+        })
 
       socket.onopen = () => {
         send({ authorize: token })
@@ -110,7 +129,7 @@ export function useDeriv() {
         if (data.error) {
           if (data.msg_type === 'authorize') {
             stopped = true
-            localStorage.removeItem(TOKEN_KEY)
+            clearDerivToken()
             setError(`Token inválido: ${data.error.message}`)
             setStatus('idle')
             setToken(null)
@@ -172,13 +191,13 @@ export function useDeriv() {
   const connect = useCallback((value: string) => {
     const trimmed = value.trim()
     if (!trimmed) return
-    localStorage.setItem(TOKEN_KEY, trimmed)
+    saveDerivToken(trimmed)
     setError(null)
     setToken(trimmed)
   }, [])
 
   const disconnect = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY)
+    clearDerivToken()
     setToken(null)
     setAccount(null)
     setTrades([])
