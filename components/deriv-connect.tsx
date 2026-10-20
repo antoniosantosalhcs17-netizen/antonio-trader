@@ -1,201 +1,114 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { KeyRound } from 'lucide-react'
+import { useState } from 'react'
 
-import {
-  clearDerivToken,
-  getStoredDerivToken,
-  readDerivTokenFromSearch,
-  saveDerivToken,
-} from '@/lib/deriv-oauth'
+import { buildDerivOAuthUrl } from '@/lib/deriv-oauth'
 
-const DERIV_WS_URL = 'wss://ws.derivws.com/websockets/v3?app_id=1089'
+export function DerivConnect({
+  onConnect,
+  error,
+  connecting,
+}: {
+  onConnect: (token: string) => void
+  error: string | null
+  connecting: boolean
+}) {
+  const [value, setValue] = useState('')
 
-export type DerivAccount = {
-  loginid: string
-  currency: string
-  balance: number
-  isVirtual: boolean
-  fullname: string
-}
-
-export type DerivTrade = {
-  id: number
-  time: string
-  label: string
-  profit: number
-}
-
-export type DerivStatus = 'idle' | 'connecting' | 'connected'
-
-type ProfitTableTransaction = {
-  transaction_id: number
-  contract_id: number
-  buy_price: number
-  sell_price: number
-  sell_time: number
-  shortcode?: string
-}
-
-const CONTRACT_LABELS: Record<string, string> = {
-  DIGITEVEN: 'PAR',
-  DIGITODD: 'ÍMPAR',
-  DIGITOVER: 'ACIMA',
-  DIGITUNDER: 'ABAIXO',
-  DIGITMATCH: 'IGUAL',
-  DIGITDIFF: 'DIFER',
-  CALL: 'SOBE',
-  PUT: 'DESCE',
-  CALLE: 'SOBE',
-  PUTE: 'DESCE',
-  MULTUP: 'MULT↑',
-  MULTDOWN: 'MULT↓',
-  ACCU: 'ACUM',
-}
-
-function contractLabel(shortcode?: string) {
-  const type = shortcode?.split('_')[0] ?? ''
-  return CONTRACT_LABELS[type] ?? (type.slice(0, 5) || '—')
-}
-
-function startOfTodayEpoch() {
-  const now = new Date()
-  now.setHours(0, 0, 0, 0)
-  return Math.floor(now.getTime() / 1000)
-}
-
-function toTrade(t: ProfitTableTransaction): DerivTrade {
-  return {
-    id: t.transaction_id,
-    time: new Date(t.sell_time * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    label: contractLabel(t.shortcode),
-    profit: Number(t.sell_price) - Number(t.buy_price),
+  const handleOAuthLogin = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = buildDerivOAuthUrl()
+    }
   }
-}
 
-export function useDeriv() {
-  const [ready, setReady] = useState(false)
-  const [token, setToken] = useState<string | null>(null)
-  const [status, setStatus] = useState<DerivStatus>('idle')
-  const [error, setError] = useState<string | null>(null)
-  const [account, setAccount] = useState<DerivAccount | null>(null)
-  const [trades, setTrades] = useState<DerivTrade[]>([])
+  return (
+    <section
+      aria-labelledby="connect-title"
+      className="rounded-3xl border border-cyan-300/40 bg-[#0a0d16]/85 p-6 shadow-[0_0_24px_rgba(34,211,238,0.18),inset_0_0_30px_rgba(168,85,247,0.08)] backdrop-blur-sm"
+    >
+      <h2 id="connect-title" className="flex items-center gap-3 text-xl font-bold uppercase tracking-wide text-yellow-300">
+        <KeyRound className="size-7 drop-shadow-[0_0_6px_rgba(253,224,71,0.7)]" aria-hidden="true" />
+        Conectar à Deriv
+      </h2>
 
-  useEffect(() => {
-    const savedToken = getStoredDerivToken() ?? readDerivTokenFromSearch(window.location.search)
+      <p className="mt-4 leading-relaxed text-slate-300">
+        Faça login com sua conta Deriv por OAuth ou use um token manualmente para carregar sua banca, ganhos e perdas.
+      </p>
 
-    if (savedToken) {
-      saveDerivToken(savedToken)
-      setToken(savedToken)
-    }
+      <button
+        type="button"
+        onClick={handleOAuthLogin}
+        className="mt-6 w-full rounded-xl bg-cyan-500 px-4 py-3.5 text-base font-bold uppercase tracking-[0.18em] text-slate-950 shadow-[0_0_20px_rgba(34,211,238,0.45)] transition hover:bg-cyan-400"
+      >
+        Entrar com Deriv OAuth
+      </button>
 
-    setReady(true)
-  }, [])
+      <div className="my-5 flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-slate-500">
+        <span className="h-px flex-1 bg-slate-700" />
+        ou
+        <span className="h-px flex-1 bg-slate-700" />
+      </div>
 
-  useEffect(() => {
-    if (!token) return
+      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-slate-400">
+        <li>
+          {'Acesse '}
+          <a
+            href="https://app.deriv.com/account/api-token"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyan-300 underline underline-offset-2"
+          >
+            app.deriv.com/account/api-token
+          </a>
+        </li>
+        <li>
+          Marque o escopo <strong className="text-white">Ler</strong>.
+        </li>
+        <li>Crie o token e cole abaixo.</li>
+      </ol>
 
-    let ws: WebSocket | null = null
-    let stopped = false
-    let pingTimer: ReturnType<typeof setInterval> | undefined
-    let retryTimer: ReturnType<typeof setTimeout> | undefined
+      <form
+        className="mt-6 flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault()
+          onConnect(value)
+        }}
+      >
+        <div className="flex flex-col gap-2">
+          <label htmlFor="deriv-token" className="text-sm font-bold uppercase text-cyan-300">
+            Token de API
+          </label>
+          <input
+            id="deriv-token"
+            type="password"
+            autoComplete="off"
+            spellCheck={false}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Ex.: a1-xxxxxxxxxxxxxxxx"
+            className="rounded-xl border border-cyan-300/30 bg-black/70 px-4 py-3.5 text-white placeholder:text-slate-500 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-300/60"
+          />
+        </div>
 
-    const open = () => {
-      setStatus('connecting')
-      const socket = new WebSocket(DERIV_WS_URL)
-      ws = socket
+        {error && (
+          <p role="alert" className="text-sm text-rose-400">
+            {error}
+          </p>
+        )}
 
-      const send = (payload: Record<string, unknown>) => {
-        if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(payload))
-      }
-      const loadTrades = () =>
-        send({ profit_table: 1, description: 1, date_from: startOfTodayEpoch(), limit: 100, sort: 'DESC' })
+        <button
+          type="submit"
+          disabled={connecting || !value.trim()}
+          className="rounded-xl bg-cyan-600 py-3.5 text-lg font-bold uppercase tracking-widest text-black shadow-[0_0_16px_rgba(34,211,238,0.45)] transition-colors hover:bg-cyan-500 disabled:opacity-50 disabled:shadow-none"
+        >
+          {connecting ? 'Conectando...' : 'Conectar'}
+        </button>
+      </form>
 
-      socket.onopen = () => {
-        send({ authorize: token })
-        pingTimer = setInterval(() => send({ ping: 1 }), 30000)
-      }
-
-      socket.onmessage = (event) => {
-        const data = JSON.parse(event.data)
-
-        if (data.error) {
-          if (data.msg_type === 'authorize') {
-            stopped = true
-            clearDerivToken()
-            setError(`Token inválido: ${data.error.message}`)
-            setStatus('idle')
-            setToken(null)
-            socket.close()
-          } else {
-            setError(data.error.message)
-          }
-          return
-        }
-
-        switch (data.msg_type) {
-          case 'authorize': {
-            const a = data.authorize
-            setAccount({
-              loginid: a.loginid,
-              currency: a.currency,
-              balance: Number(a.balance),
-              isVirtual: Boolean(a.is_virtual),
-              fullname: a.fullname ?? '',
-            })
-            setStatus('connected')
-            setError(null)
-            send({ balance: 1, subscribe: 1 })
-            send({ transaction: 1, subscribe: 1 })
-            loadTrades()
-            break
-          }
-          case 'balance':
-            setAccount((prev) => (prev ? { ...prev, balance: Number(data.balance.balance) } : prev))
-            break
-          case 'transaction':
-            if (data.transaction?.action === 'sell') loadTrades()
-            break
-          case 'profit_table':
-            setTrades((data.profit_table?.transactions ?? []).map(toTrade))
-            break
-        }
-      }
-
-      socket.onclose = () => {
-        clearInterval(pingTimer)
-        if (!stopped) {
-          setStatus('connecting')
-          retryTimer = setTimeout(open, 3000)
-        }
-      }
-    }
-
-    open()
-
-    return () => {
-      stopped = true
-      clearInterval(pingTimer)
-      clearTimeout(retryTimer)
-      ws?.close()
-    }
-  }, [token])
-
-  const connect = useCallback((value: string) => {
-    const trimmed = value.trim()
-    if (!trimmed) return
-    saveDerivToken(trimmed)
-    setError(null)
-    setToken(trimmed)
-  }, [])
-
-  const disconnect = useCallback(() => {
-    clearDerivToken()
-    setToken(null)
-    setAccount(null)
-    setTrades([])
-    setStatus('idle')
-  }, [])
-
-  return { ready, token, status, error, account, trades, connect, disconnect }
+      <p className="mt-4 text-xs leading-relaxed text-slate-400">
+        O token fica salvo apenas neste navegador e é enviado direto para a Deriv. Use uma conta Demo para testar.
+      </p>
+    </section>
+  )
 }

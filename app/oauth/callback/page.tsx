@@ -30,7 +30,8 @@ export default function OAuthCallbackPage() {
     saveDerivToken(token)
     setMessage('Login concluído com sucesso!')
 
-    window.setTimeout(() => router.replace('/'), 600)
+    const timer = window.setTimeout(() => router.replace('/'), 600)
+    return () => window.clearTimeout(timer)
   }, [router, searchParams])
 
   return (
