@@ -1,55 +1,60 @@
-'use client'
-import { useState, useEffect } from 'react'
+"use client";
 
-const APP_ID = '01a0dd52-41f4-7a80-bb15-64efc8b1a141'
+export default function LoginPage() {
+  async function loginWithDeriv() {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
 
-export default function Page() {
-  const [token, setToken] = useState<string | null>(null)
+    sessionStorage.setItem("deriv_code_verifier", codeVerifier);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const t = params.get('token1')
-    if (t) {
-      localStorage.setItem('deriv_token', t)
-      setToken(t)
-      window.history.replaceState({}, '', '/')
-    } else {
-      const salvo = localStorage.getItem('deriv_token')
-      if (salvo) setToken(salvo)
-    }
-  }, [])
+    const params = new URLSearchParams({
+      client_id: "SEU_CLIENT_ID",
+      response_type: "code",
+      redirect_uri: "https://seuapp.com/oauth/callback",
+      scope: "openid profile",
+      state: crypto.randomUUID(),
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+    });
 
-  const conectar = () => {
-    // LINK CERTO QUE VOLTA PRO SEU APP
-    window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&l=pt`
-  }
+    const authUrl = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
 
-  const criarConta = () => {
-    window.location.href = `https://deriv.com/pt?app_id=${APP_ID}`
-  }
-
-  if (token) {
-    return (
-      <div className="min-h-screen bg-black text-white p-10">
-        <h1 className="text-2xl font-bold text-green-400">CONECTADO COM SUCESSO!</h1>
-        <p className="mt-4 break-all text-sm">Token: {token.slice(0,15)}...</p>
-        <button onClick={() => {localStorage.clear(); setToken(null)}} className="mt-6 bg-red-500 px-4 py-2 rounded">Desconectar</button>
-      </div>
-    )
+    window.location.href = authUrl;
   }
 
   return (
-    <main className="min-h-screen bg-[#0A0A0F] flex flex-col">
-      <div className="flex-1 p-6 flex flex-col justify-center max-w-md mx-auto w-full">
-        <div className="bg-[#13131A] border border-white/10 rounded-xl p-6 space-y-4">
-          <button onClick={conectar} className="w-full bg-[#2D5BFF] py-4 rounded-lg text-white font-bold">
-            Conectar com a conta da DERIV
-          </button>
-          <button onClick={criarConta} className="w-full bg-[#2A2A32] py-4 rounded-lg text-white font-bold border border-white/10">
-            Criar nova conta DERIV
-          </button>
-        </div>
-      </div>
-    </main>
-  )
+    <button onClick={loginWithDeriv}>
+      Entrar com Deriv
+    </button>
+  );
+}
+
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+
+  return base64UrlEncode(array);
+}
+
+function base64UrlEncode(value: Uint8Array | ArrayBuffer) {
+  const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+async function generateCodeChallenge(verifier: string) {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+
+  const digest = await crypto.subtle.digest("SHA-256", data);
+
+  return base64UrlEncode(digest);
 }
