@@ -1,60 +1,17 @@
-"use client";
+import { Dashboard } from '@/components/dashboard'
 
-export default function LoginPage() {
-  async function loginWithDeriv() {
-    const codeVerifier = generateCodeVerifier();
-    const codeChallenge = await generateCodeChallenge(codeVerifier);
-
-    sessionStorage.setItem("deriv_code_verifier", codeVerifier);
-
-    const params = new URLSearchParams({
-      client_id: "SEU_CLIENT_ID",
-      response_type: "code",
-      redirect_uri: "https://seuapp.com/oauth/callback",
-      scope: "openid profile",
-      state: crypto.randomUUID(),
-      code_challenge: codeChallenge,
-      code_challenge_method: "S256",
-    });
-
-    const authUrl = `https://oauth.deriv.com/oauth2/authorize?${params.toString()}`;
-
-    window.location.href = authUrl;
-  }
-
+export default function Page() {
   return (
-    <button onClick={loginWithDeriv}>
-      Entrar com Deriv
-    </button>
-  );
-}
-
-function generateCodeVerifier() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-
-  return base64UrlEncode(array);
-}
-
-function base64UrlEncode(value: Uint8Array | ArrayBuffer) {
-  const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
-
-  let binary = "";
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte);
-  });
-
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
-
-async function generateCodeChallenge(verifier: string) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-
-  const digest = await crypto.subtle.digest("SHA-256", data);
-
-  return base64UrlEncode(digest);
+    <main
+      className="min-h-dvh bg-[#05070d] bg-cover bg-center bg-fixed"
+      style={{ backgroundImage: "url('/images/bg-cyber.png')" }}
+    >
+      <div className="mx-auto flex max-w-md flex-col gap-6 px-5 pb-10 pt-10">
+        <h1 className="text-center font-display text-[4.25rem] uppercase leading-[1.1] tracking-tight text-cyan-200 [text-shadow:0_0_10px_rgba(103,232,249,0.9),0_0_30px_rgba(34,211,238,0.6)] sm:text-[5rem]">
+          Antonio Trader
+        </h1>
+        <Dashboard />
+      </div>
+    </main>
+  )
 }
